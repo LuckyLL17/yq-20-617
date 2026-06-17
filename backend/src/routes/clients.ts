@@ -1,78 +1,65 @@
+/**
+ * 客户路由
+ * 处理客户相关请求
+ */
+
 import { Router } from 'express';
-import { prisma } from '../index';
-import { authenticateToken, requireRoles, AuthRequest } from '../middleware/auth';
+import { clientController } from '../controllers/client.controller';
+import { authenticateToken, requireRoles } from '../middleware/auth';
+import { validateBody } from '../middleware/validate';
+import { createClientDto, updateClientDto } from '../dto/client.dto';
 import { UserRole } from '@prisma/client';
-import { z } from 'zod';
 
 const router = Router();
 
-const clientSchema = z.object({
-  name: z.string(),
-  type: z.string(),
-  idNumber: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
-  address: z.string().optional(),
-  contactPerson: z.string().optional()
-});
+/**
+ * @route GET /api/clients
+ * @desc 获取客户列表
+ * @access Private
+ */
+router.get('/', authenticateToken, clientController.getAllClients);
 
-router.get('/', authenticateToken, async (req, res) => {
-  const clients = await prisma.client.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(clients);
-});
+/**
+ * @route GET /api/clients/:id
+ * @desc 获取客户详情
+ * @access Private
+ */
+router.get('/:id', authenticateToken, clientController.getClientById);
 
-router.get('/:id', authenticateToken, async (req, res) => {
-  const client = await prisma.client.findUnique({
-    where: { id: req.params.id },
-    include: {
-      cases: {
-        select: {
-          id: true,
-          caseNumber: true,
-          title: true,
-          status: true,
-          createdAt: true
-        }
-      }
-    }
-  });
-  if (!client) {
-    return res.status(404).json({ error: '客户不存在' });
-  }
-  res.json(client);
-});
+/**
+ * @route POST /api/clients
+ * @desc 创建客户
+ * @access Private
+ */
+router.post(
+  '/',
+  authenticateToken,
+  validateBody(createClientDto),
+  clientController.createClient
+);
 
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const data = clientSchema.parse(req.body);
-    const client = await prisma.client.create({
-      data
-    });
-    res.status(201).json(client);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || '创建客户失败' });
-  }
-});
+/**
+ * @route PUT /api/clients/:id
+ * @desc 更新客户
+ * @access Private
+ */
+router.put(
+  '/:id',
+  authenticateToken,
+  validateBody(updateClientDto),
+  clientController.updateClient
+);
 
-router.put('/:id', authenticateToken, async (req, res) => {
-  try {
-    const client = await prisma.client.update({
-      where: { id: req.params.id },
-      data: req.body
-    });
-    res.json(client);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || '更新客户失败' });
-  }
-});
-
-router.delete('/:id', authenticateToken, requireRoles([UserRole.ADMIN]), async (req, res) => {
-  await prisma.client.delete({
-    where: { id: req.params.id }
-  });
-  res.json({ message: '客户已删除' });
-});
+/**
+ * @route DELETE /api/clients/:id
+ * @desc 删除客户
+ * @access Private (Admin)
+ */
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRoles([UserRole.ADMIN]),
+  clientController.deleteClient
+);
 
 export default router;
