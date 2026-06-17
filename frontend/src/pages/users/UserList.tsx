@@ -51,7 +51,7 @@ export default function UserList() {
       form.resetFields();
       loadUsers();
     } catch (error: any) {
-      message.error(error.response?.data?.error || '操作失败');
+      message.error(error.message || '操作失败');
     }
   };
 
