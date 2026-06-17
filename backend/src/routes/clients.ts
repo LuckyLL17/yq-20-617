@@ -1,78 +1,53 @@
 import { Router } from 'express';
-import { prisma } from '../index';
-import { authenticateToken, requireRoles, AuthRequest } from '../middleware/auth';
+import { clientController } from '../controllers/client.controller';
+import { authenticateToken, requireRoles } from '../middleware/auth';
+import { asyncHandler, validateBody } from '../middleware/validate';
+import { createClientDto, updateClientDto } from '../dtos/client.dto';
 import { UserRole } from '@prisma/client';
-import { z } from 'zod';
 
 const router = Router();
 
-const clientSchema = z.object({
-  name: z.string(),
-  type: z.string(),
-  idNumber: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
-  address: z.string().optional(),
-  contactPerson: z.string().optional()
-});
+/**
+ * 客户路由
+ * 处理客户相关请求
+ */
 
-router.get('/', authenticateToken, async (req, res) => {
-  const clients = await prisma.client.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(clients);
-});
+// 获取客户列表
+router.get(
+  '/',
+  authenticateToken,
+  asyncHandler(clientController.getClients.bind(clientController))
+);
 
-router.get('/:id', authenticateToken, async (req, res) => {
-  const client = await prisma.client.findUnique({
-    where: { id: req.params.id },
-    include: {
-      cases: {
-        select: {
-          id: true,
-          caseNumber: true,
-          title: true,
-          status: true,
-          createdAt: true
-        }
-      }
-    }
-  });
-  if (!client) {
-    return res.status(404).json({ error: '客户不存在' });
-  }
-  res.json(client);
-});
+// 获取客户详情
+router.get(
+  '/:id',
+  authenticateToken,
+  asyncHandler(clientController.getClientById.bind(clientController))
+);
 
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const data = clientSchema.parse(req.body);
-    const client = await prisma.client.create({
-      data
-    });
-    res.status(201).json(client);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || '创建客户失败' });
-  }
-});
+// 创建客户
+router.post(
+  '/',
+  authenticateToken,
+  validateBody(createClientDto),
+  asyncHandler(clientController.createClient.bind(clientController))
+);
 
-router.put('/:id', authenticateToken, async (req, res) => {
-  try {
-    const client = await prisma.client.update({
-      where: { id: req.params.id },
-      data: req.body
-    });
-    res.json(client);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || '更新客户失败' });
-  }
-});
+// 更新客户
+router.put(
+  '/:id',
+  authenticateToken,
+  validateBody(updateClientDto),
+  asyncHandler(clientController.updateClient.bind(clientController))
+);
 
-router.delete('/:id', authenticateToken, requireRoles([UserRole.ADMIN]), async (req, res) => {
-  await prisma.client.delete({
-    where: { id: req.params.id }
-  });
-  res.json({ message: '客户已删除' });
-});
+// 删除客户（仅管理员）
+router.delete(
+  '/:id',
+  authenticateToken,
+  requireRoles([UserRole.ADMIN]),
+  asyncHandler(clientController.deleteClient.bind(clientController))
+);
 
 export default router;
