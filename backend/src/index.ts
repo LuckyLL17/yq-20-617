@@ -1,33 +1,62 @@
 import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
-import authRoutes from './routes/auth';
-import caseRoutes from './routes/cases';
-import clientRoutes from './routes/clients';
-import userRoutes from './routes/users';
-import billingRoutes from './routes/billing';
-import performanceRoutes from './routes/performance';
+import routes from './routes';
+import { connectDatabase } from './config/database';
+import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { success } from './common/response';
 
-export const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+/**
+ * 中间件配置
+ */
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/cases', caseRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/billing', billingRoutes);
-app.use('/api/performance', performanceRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: '案件管理平台API运行正常' });
+/**
+ * 健康检查接口
+ */
+app.get('/api/health', (_req, res) => {
+  res.json(success({ status: 'ok' }, '案件管理平台API运行正常'));
 });
 
-app.listen(PORT, () => {
-  console.log(`服务器运行在 http://localhost:${PORT}`);
-});
+/**
+ * API 路由
+ */
+app.use('/api', routes);
+
+/**
+ * 404 处理
+ */
+app.use(notFoundHandler);
+
+/**
+ * 全局异常处理
+ */
+app.use(errorHandler);
+
+/**
+ * 启动服务器
+ */
+async function startServer() {
+  try {
+    // 连接数据库
+    await connectDatabase();
+
+    // 启动 HTTP 服务器
+    app.listen(PORT, () => {
+      console.log(`服务器运行在 http://localhost:${PORT}`);
+      console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('服务器启动失败:', error);
+    process.exit(1);
+  }
+}
+
+// 启动服务器
+startServer();
 
 export default app;
