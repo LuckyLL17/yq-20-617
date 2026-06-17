@@ -1,14 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth';
 import caseRoutes from './routes/cases';
 import clientRoutes from './routes/clients';
 import userRoutes from './routes/users';
 import billingRoutes from './routes/billing';
 import performanceRoutes from './routes/performance';
+import { errorHandler } from './middleware/errorHandler';
+import { success } from './types/response';
 
-export const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -23,8 +23,10 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/performance', performanceRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: '案件管理平台API运行正常' });
+  res.json(success({ status: 'ok' }, '案件管理平台API运行正常'));
 });
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
