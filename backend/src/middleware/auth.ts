@@ -29,7 +29,7 @@ export function authenticateToken(
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    throw new UnauthorizedError('未提供认证令牌');
+    return next(new UnauthorizedError('未提供认证令牌'));
   }
 
   const secret = process.env.JWT_SECRET || 'secret';
@@ -50,11 +50,11 @@ export function authenticateToken(
 export function requireRoles(roles: UserRole[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-      throw new UnauthorizedError('未认证');
+      return next(new UnauthorizedError('未认证'));
     }
 
     if (!roles.includes(req.user.role)) {
-      throw new ForbiddenError('权限不足');
+      return next(new ForbiddenError('权限不足'));
     }
 
     next();
