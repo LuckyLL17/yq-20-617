@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  LAWYER
+  FINANCE
+  CLIENT
+}
+
+enum CaseStatus {
+  CONSULTATION
+  CONFLICT_CHECK
+  PENDING_APPROVAL
+  ACTIVE
+  COURT_HEARING
+  SETTLEMENT
+  CLOSED
+  CANCELLED
+}
+
+enum CaseStage {
+  CONSULTATION
+  CONFLICT_CHECK
+  CASE_REGISTRATION
+  APPROVAL
+  LAWYER_ASSIGNMENT
+  EVIDENCE_COLLECTION
+  DRAFT_DOCUMENTS
+  COURT_FILING
+  EVIDENCE_EXCHANGE
+  PRE_TRIAL_CONFERENCE
+  COURT_HEARING
+  JUDGMENT
+  APPEAL
+  ENFORCEMENT
+  SETTLEMENT
+  ARCHIVE
+}
+
+enum BillingMode {
+  HOURLY
+  FIXED
+  CONTINGENCY
+  PROGRESSIVE
+  MIXED
+}
+
+enum FeeType {
+  LEGAL_FEE
+  ADVANCE_FEE
+  ADMIN_FEE
+  OTHER
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  REFUNDED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         UserRole
+  phone        String?
+  department   String?
+  hourlyRate   Decimal?  @db.Decimal(10, 2)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  isActive     Boolean   @default(true)
+  
+  lawyerAssignments LawyerAssignment[]
+  timeEntries       TimeEntry[]
+  performanceShares PerformanceShare[]
+  createdCases      LegalCase[]        @relation("CreatedBy")
+  conflictChecks    ConflictCheck[]
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  idNumber    String?
+  phone       String?
+  email       String?
+  address     String?
+  contactPerson String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  cases LegalCase[]
+}
+
+model LegalCase {
+  id              String     @id @default(cuid())
+  caseNumber      String     @unique
+  title           String
+  description     String?
+  caseType        String
+  status          CaseStatus
+  currentStage    CaseStage
+  priority        String?
+  court           String?
+  caseNo          String?
+  opposingParty   String?
+  claimAmount     Decimal?   @db.Decimal(15, 2)
+  
+  clientId        String
+  client          Client     @relation(fields: [clientId], references: [id])
+  
+  createdById     String
+  createdBy       User       @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  billingMode     BillingMode
+  estimatedFee    Decimal?   @db.Decimal(15, 2)
+  contingencyRate Decimal?   @db.Decimal(5, 2)
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  closedAt        DateTime?
+  
+  stageHistory    StageHistory[]
+  lawyerAssignments LawyerAssignment[]
+  evidence        Evidence[]
+  hearings        Hearing[]
+  timeEntries     TimeEntry[]
+  invoices        Invoice[]
+  payments        Payment[]
+  advanceFees     AdvanceFee[]
+  performanceShares PerformanceShare[]
+  conflictCheck   ConflictCheck?
+  documents       Document[]
+}
+
+model StageHistory {
+  id        String    @id @default(cuid())
+  caseId    String
+  caseItem  LegalCase @relation(fields: [caseId], references: [id])
+  stage     CaseStage
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  notes     String?
+  operatorId String?
+  createdAt DateTime  @default(now())
+}
+
+model ConflictCheck {
+  id              String     @id @default(cuid())
+  caseId          String     @unique
+  caseItem        LegalCase  @relation(fields: [caseId], references: [id])
+  checkedById     String
+  checkedBy       User       @relation(fields: [checkedById], references: [id])
+  hasConflict     Boolean
+  conflictDetails String?
+  status          String
+  checkedAt       DateTime?
+  createdAt       DateTime   @default(now())
+}
+
+model LawyerAssignment {
+  id          String    @id @default(cuid())
+  caseId      String
+  caseItem    LegalCase @relation(fields: [caseId], references: [id])
+  lawyerId    String
+  lawyer      User      @relation(fields: [lawyerId], references: [id])
+  role        String
+  allocation  Decimal   @db.Decimal(5, 2)
+  isLead      Boolean   @default(false)
+  assignedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+model Evidence {
+  id           String     @id @default(cuid())
+  caseId       String
+  caseItem     LegalCase  @relation(fields: [caseId], references: [id])
+  name         String
+  type         String
+  description  String?
+  source       String?
+  receivedDate DateTime?
+  status       String
+  storedLocation String?
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+}
+
+model Hearing {
+  id          String    @id @default(cuid())
+  caseId      String
+  caseItem    LegalCase @relation(fields: [caseId], references: [id])
+  title       String
+  date        DateTime
+  court       String?
+  courtroom   String?
+  judge       String?
+  notes       String?
+  outcome     String?
+  createdAt   DateTime  @default(now())
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  caseId      String
+  caseItem    LegalCase @relation(fields: [caseId], references: [id])
+  lawyerId    String
+  lawyer      User      @relation(fields: [lawyerId], references: [id])
+  date        DateTime
+  hours       Decimal   @db.Decimal(5, 2)
+  description String
+  taskType    String?
+  rate        Decimal   @db.Decimal(10, 2)
+  isBillable  Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  caseId         String
+  caseItem       LegalCase     @relation(fields: [caseId], references: [id])
+  invoiceNumber  String        @unique
+  issueDate      DateTime
+  dueDate        DateTime?
+  totalAmount    Decimal       @db.Decimal(15, 2)
+  status         PaymentStatus
+  items          InvoiceItem[]
+  payments       Payment[]
+  createdAt      DateTime      @default(now())
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+  description String
+  feeType     FeeType
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  amount      Decimal @db.Decimal(15, 2)
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  caseId        String
+  caseItem      LegalCase @relation(fields: [caseId], references: [id])
+  invoiceId     String?
+  invoice       Invoice?  @relation(fields: [invoiceId], references: [id])
+  amount        Decimal   @db.Decimal(15, 2)
+  paymentDate   DateTime
+  paymentMethod String
+  payer         String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+}
+
+model AdvanceFee {
+  id          String    @id @default(cuid())
+  caseId      String
+  caseItem    LegalCase @relation(fields: [caseId], references: [id])
+  description String
+  amount      Decimal   @db.Decimal(15, 2)
+  reimbursed  Boolean   @default(false)
+  reimbursedAt DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+}
+
+model PerformanceShare {
+  id            String  @id @default(cuid())
+  caseId        String
+  caseItem      LegalCase @relation(fields: [caseId], references: [id])
+  lawyerId      String
+  lawyer        User    @relation(fields: [lawyerId], references: [id])
+  totalHours    Decimal @db.Decimal(10, 2)
+  shareRatio    Decimal @db.Decimal(5, 4)
+  contribution  Decimal @db.Decimal(5, 4)
+  allocatedFee  Decimal @db.Decimal(15, 2)
+  calculatedAt  DateTime
+}
+
+model Document {
+  id           String    @id @default(cuid())
+  caseId       String
+  caseItem     LegalCase @relation(fields: [caseId], references: [id])
+  name         String
+  type         String
+  fileUrl      String
+  uploadedById String?
+  createdAt    DateTime  @default(now())
+}
