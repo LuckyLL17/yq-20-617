@@ -1,5 +1,5 @@
 import { Button, Card, message, Space } from 'antd';
-import { UserOutlined, LockOutlined, CrownOutlined, DollarOutlined, AuditOutlined, TeamOutlined } from '@ant-design/icons';
+import { CrownOutlined, DollarOutlined, AuditOutlined, TeamOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
@@ -23,7 +23,7 @@ export default function Login() {
       message.success(`${account.label}登录成功`);
       navigate('/');
     } catch (error: any) {
-      message.error(error.response?.data?.error || '登录失败');
+      message.error(error.message || error.response?.data?.message || '登录失败');
     } finally {
       setLoadingKey(null);
     }

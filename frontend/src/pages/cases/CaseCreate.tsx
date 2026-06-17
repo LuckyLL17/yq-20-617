@@ -90,8 +90,8 @@ export default function CaseCreate() {
       message.success('案件创建成功');
       navigate('/cases');
     } catch (error: any) {
-      if (error.response?.data?.error) {
-        message.error(error.response.data.error);
+      if (error.message) {
+        message.error(error.message);
       } else if (error.errorFields) {
         message.error('请填写必填字段');
       }

@@ -9,7 +9,19 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@common/*": ["common/*"],
+      "@config/*": ["config/*"],
+      "@controllers/*": ["controllers/*"],
+      "@services/*": ["services/*"],
+      "@repositories/*": ["repositories/*"],
+      "@dtos/*": ["dtos/*"],
+      "@middleware/*": ["middleware/*"],
+      "@utils/*": ["utils/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
