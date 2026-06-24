@@ -90,10 +90,12 @@ export default function CaseCreate() {
       message.success('案件创建成功');
       navigate('/cases');
     } catch (error: any) {
-      if (error.response?.data?.error) {
-        message.error(error.response.data.error);
+      if (error.message || error.response?.data?.message) {
+        message.error(error.message || error.response?.data?.message);
       } else if (error.errorFields) {
         message.error('请填写必填字段');
+      } else {
+        message.error('创建案件失败');
       }
     }
   };
